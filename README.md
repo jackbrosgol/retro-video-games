@@ -4,4 +4,5 @@ Retro video games made for the [Tic-80](https://tic80.com/) platform. Tic-80 is 
 
 Frogger is a remake of its namesake, while Aang and the Western Air Temple is an original game.
 
-Play Frogger here: 
+Play Frogger here: [Link](https://tic80.com/play?cart=3706)
+Play Aang and the Western Air Temple here: [Link](https://tic80.com/play?cart=3707)
