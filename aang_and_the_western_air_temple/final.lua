@@ -1,0 +1,847 @@
+-- title: Untitled
+-- desc: New TIC80 Game
+-- author: Jackson Brosgol and Kenneth Barkdoll 
+-- script: lua
+
+
+
+p = {px = 32, py = 32, facing = 0, dy = 0, dx = 0, ddy = 0.5, ddx = 0, lives = 5, respawn = {x = 50, y=50}}
+theMap = {mapXS = 0, mapXE = 36, mapYS = 0, mapYE = 17}
+fireSprite = {x, y, dx, draw = 1}
+fire = {min = 1, max = 0, fs = {}, meter = 300, count = 0}
+fire.fs[0] = fireSprite
+fire.fs[0].draw = 0
+spirit = {x=230, y=96, dx=1, dy=0, ddx=0, ddy=0, facing = 0, id = 0, meter = 0, alive = 1, watered = false}
+spirits = {min = 1, max = 0, ss = {}}
+earth = {shield = false, time = 0, meter=200}
+-- water = {meter = 600}
+--water = {meter = 600}
+waterSprite = {x, y, dx, draw = 1}
+water = {min = 1, max = 0, ws = {}, meter = 300, count = 0}
+water.ws[0] = waterSprite
+water.ws[0].draw = 0
+air = {on = false, time = 0, meter = 300}
+start = true
+
+-- spiritMax = 40
+lanternMax = 31
+lanternCount = 0
+
+
+
+
+--init enemy spawn points
+state0 = {lanternNum = 0, xs = 0, xe = 240*8, ys = 0 *8, ye = 135*8, xl = "error", xr = "error", yt = "error", yb = "error", lanterns = {}}
+surface = {lanternNum = 2, xe = 166 *8, ye = 20*8,  xr, lanterns = {}}
+setmetatable(surface, {__index=state0})
+surface.lanterns[1] = {x = 113*8, y = 010*8}
+surface.lanterns[2] = {x = 165*8, y = 010*8}
+edge = {lanternNum = 3, xs = 166*8, ye = 30*8, xl, yb, lanterns = {}}
+setmetatable(edge, {__index=state0})
+edge.lanterns[1] = {x = 197*8, y = 8*8}
+edge.lanterns[2] = {x = 207*8, y = 8*8}
+edge.lanterns[3] = {x = 176*8, y = 29*8}
+
+bottom = {lanternNum = 2, xs = 143*8, ys = 30 *8, xl, yt, lanterns = {}}
+setmetatable(bottom, {__index=state0})
+bottom.lanterns[1] = {x = 144*8, y =56*8}
+bottom.lanterns[2] = {x = 155*8, y =56*8}
+
+arch = {lanternNum = 5, xs = 92*8, xe = 142 *8, ys = 20 *8, xl, xr, lanterns = {}}
+setmetatable(arch, {__index=state0})
+arch.lanterns[1] = {x = 128*8, y =040*8}
+arch.lanterns[2] = {x = 118*8, y =033*8}
+arch.lanterns[3] = {x = 111*8, y =023*8}
+arch.lanterns[4] = {x = 103*8, y =035*8}
+arch.lanterns[5] = {x = 092*8, y =047*8}
+
+chandelier = {lanternNum = 12, xs = 48*8, xe = 90 *8, ys = 20 *8,  xl, xr, lanterns = {}}
+setmetatable(chandelier, {__index=state0})
+chandelier.lanterns[1] = {x =076*8, y =064*8}
+chandelier.lanterns[2] = {x =072*8, y =71*8}
+chandelier.lanterns[3] = {x =080*8, y =71*8}
+chandelier.lanterns[4] = {x =070*8, y =77*8}
+chandelier.lanterns[5] = {x =082*8, y =77*8}
+chandelier.lanterns[6] = {x =070*8, y =97*8}
+chandelier.lanterns[7] = {x =076*8, y =97*8}
+chandelier.lanterns[8] = {x =082*8, y =97*8}
+chandelier.lanterns[9] = {x =076*8, y =107*8}
+chandelier.lanterns[10] = {x =076*8, y =117*8}
+chandelier.lanterns[11] = {x =56*8, y =102*8}
+chandelier.lanterns[12] = {x =49*8, y =113*8}
+
+cave = {lanternNum = 7, xe = 68 *8, ys = 20 *8, xr, lanterns = {}}
+setmetatable(cave, {__index=state0})
+cave.lanterns[1] = {x = 24*8, y =111*8}
+cave.lanterns[2] = {x = 9*8, y =85*8}
+cave.lanterns[3] = {x = 10*8, y =95*8}
+cave.lanterns[4] = {x = 14*8, y =76*8}
+cave.lanterns[5] = {x = 8*8, y =67*8}
+cave.lanterns[6] = {x = 18*8, y =61*8}
+cave.lanterns[7] = {x = 25*8, y =58*8}
+
+surface.xr = edge
+edge.xl = surface
+edge.yb = bottom
+bottom.xl = arch
+bottom.yt = edge
+arch.xl = chandelier
+arch.xr = bottom
+chandelier.xl = cave
+chandelier.xr = arch
+cave.xr = chandelier
+
+
+state = surface
+
+
+-- timer for enemies spawning
+itrs = 0
+
+-- Earth
+earthShield = false
+itrsE = 0
+
+function callAir()
+    if btn(6) then 
+        if air.meter > 3 then
+            p.dy = -1.5 
+            air.on = true
+            air.meter = air.meter - 4
+        end
+    else
+        air.on = false
+    end
+ 
+ end
+ 
+ --[[ 
+ function callAir2()
+     if earth.meter > 100 then 
+         if earth.on == false then 
+             earth.meter = earth.meter - 100
+             earth.on = true
+             earth.time = 180
+         else
+             
+       end
+    end
+ end
+ --]]
+ 
+function callEarth()
+    if btnp(4) then 
+        if earth.meter > 100 then 
+            if earth.shield == false then 
+                earth.meter = earth.meter - 100
+                earth.shield = true
+                earth.time = 180
+            end
+        else 
+            earth.meter = earth.meter - 20
+        end
+    end
+    
+    if (earth.time > 0) then
+        earth.time = earth.time - 1
+    else 
+        earth.shield = false
+    end
+end
+
+function clearLocalSprites()
+    for i = spirits.min, spirits.max, 1 do
+        if math.abs(p.px - spirits.ss[i].x) < 80 and math.abs(p.py - spirits.ss[i].y) < 80 then
+            spirits.ss[i].draw = 0
+        end
+    end
+end
+
+function callFire()
+  
+     -- Shoot Fire if button pressed
+    if btnp(5) then 
+        if mget(((p.px+4) // 8), ((p.py+1) // 8)) == 65 then
+            mset((p.px+4) // 8, ((p.py) // 8), 81)
+            lanternCount = lanternCount + 1
+            p.respawn.x = p.px
+            p.respawn.y = p.py
+            clearLocalSprites()
+        else 
+            if fire.meter > 50 then
+                fire.meter = fire.meter - 50
+                fire.max = fire.max + 1
+                fire.fs[fire.max] = {x = p.px, y = p.py, dx, draw = 1}
+                if p.facing == 0 then fire.fs[fire.max].dx = 1.5 else fire.fs[fire.max].dx = -1.5 end
+            end
+        end
+    end
+
+    -- spr(289, p.px+24, p.py+24,0) 
+    if (fire.max > 0) then
+        for i=fire.min, fire.max do
+            if fire.fs[i].draw == 1 then
+                fire.fs[i].x = fire.fs[i].x + fire.fs[i].dx
+                if math.abs(p.px - fire.fs[i].x) > 128 then fire.fs[i].draw = 0 end
+                spr(289, fire.fs[i].x - (theMap.mapXS*8 - sx), fire.fs[i].y - (theMap.mapYS*8-sy),0)  
+            end
+        end
+    end
+    --[[
+    if (fire.max > 0) then 
+        if (fire.fs[fire.min].draw == 1) then 
+            fire.fs[fire.min].x = fire.fs[fire.min].x + fire.fs[fire.min].dx
+            spr(289, fire.fs[fire.min].x - (theMap.mapXS*8 - sx), fire.fs[fire.min].y - (theMap.mapYS*8-sy),0)
+            if math.abs(p.px - fire.fs[fire.min].x) > 128 then fire.fs[fire.min].draw = 0 end  
+        end
+    end
+    --]]
+end
+
+function callWater()
+ 
+    if btnp(7) then 
+     
+        if water.meter > 50 then
+            water.meter = water.meter - 50
+            water.max = water.max + 1
+            water.ws[water.max] = {x = p.px, y = p.py, dx, draw = 1}
+            if p.facing == 0 then water.ws[water.max].dx = 1.5 else water.ws[water.max].dx = -1.5 end
+        end
+    end
+    
+    if (water.max > 0) then
+        for i=water.min, water.max do
+            if water.ws[i].draw == 1 then
+                water.ws[i].x = water.ws[i].x + water.ws[i].dx
+                if math.abs(p.px - water.ws[i].x) > 128 or water.ws[i].x < 0 then water.ws[i].draw = 0 end
+                spr(290, water.ws[i].x - (theMap.mapXS*8 - sx), water.ws[i].y- (theMap.mapYS*8-sy),0) 
+            end
+        end
+    end
+    --[[
+    if (water.max > 0) then 
+        if (water.ws[water.min].draw == 1) then 
+            water.ws[water.min].x = water.ws[water.min].x + water.ws[water.min].dx
+            spr(289, water.ws[water.min].x - (theMap.mapXS*8 - sx), water.ws[water.min].y - (theMap.mapYS*8-sy),0)
+            if math.abs(p.px - water.ws[water.min].x) > 128 then water.ws[water.min].draw = 0 end  
+        end
+    end
+    --]]
+
+end
+
+function elements() 
+   if btnp(4) then callEarth() end
+   if btnp(5) then callFire() end
+   if btnp(6) then callAir() end
+   if btnp(7) then callWater() end
+
+end
+
+function movement() 
+    inputdy = 0
+    inputdx = 0
+    if btnp(0) and 1 == mget(((p.px+4) // 8), (p.py // 8) + 2) then p.dy = p.dy - 5 end
+    if btnp(1) then inputdy = inputdy + 1 end
+    if btn(2) then 
+        inputdx = inputdx - 1
+        p.facing = 1 
+    end
+    if btn(3) then 
+        inputdx = inputdx + 1
+        p.facing = 0 
+    
+    end
+
+    p.dx = inputdx
+end
+
+function moveEnemies()
+    --print(spirits.max, 0, 0, 15)
+    --[[
+    if p.px < 800 then spawnFreq = 200
+    else spawnFreq = 90 end
+    
+    --if btnp(0) then
+    if itrs > spawnFreq and (spirits.max - spirits.min)< spiritMax then
+        itrs = 0
+        spirits.max = spirits.max + 1
+
+        -- Spawn random x coordinate for spirit
+        -- add instance of spirit to end of list
+        spirits.ss[spirits.max] = {x=math.random(p.px,p.px+230), y=80, dx=1, dy=0, ddx=0, ddy=0, facing = 0, id = 0, meter = 0, alive = 1, watered = false} 
+        -- check to see if it spawned at a valid x value (e.g if it spawned at an x value in the middle of a rock, you have to change the y coordinate)
+        -- similarly, if it spawned at an x coordinate in the middle of black space, the y coordinate needs to be higher (go down the screen)
+        -- Note: the "break" is to ensure the loop doesn't run forever
+        if 0 ~= mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+1) then
+            ups = 0
+            while 0 ~= mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+1) do 
+                if ups > 100 then 
+                    spirits.ss[spirits.max].y = 50
+                    break 
+                end
+                ups = ups + 1
+                spirits.ss[spirits.max].y = spirits.ss[spirits.max].y-8
+            end 
+        elseif 0 == mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+2) then 
+            falls = 0
+            while 0 == mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+2)
+            do
+                if falls > 100 then 
+                    break 
+                end
+                falls = falls + 1
+                spirits.ss[spirits.max].y = spirits.ss[spirits.max].y+8
+            end 
+        end
+    end 
+    --]]
+        -- print all the sprites
+    for i = spirits.min, spirits.max, 1 do
+        if spirits.ss[i].alive == 1 then 
+            spr(264, spirits.ss[i].x - (theMap.mapXS*8 - sx), spirits.ss[i].y - (theMap.mapYS*8-sy), 0, 1, 0, 0, 1, 2)
+        end
+        --p.px - (theMap.mapXS*8 - sx), p.py - (theMap.mapYS*8-sy)
+
+        spirits.ss[i].x = spirits.ss[i].x - spirits.ss[i].dx
+        -- move the spirits back on forth on their given elevation.
+        -- Note: this if statement is long for purposes of fine tuning, the only important part is:
+        -- "0 == mget(spirits.ss[i].x//8, spirits.ss[i].y//8+2" and "0 ~= mget(spirits.ss[i].x//8+1, spirits.ss[i].y//8+1"
+        background = mget(spirits.ss[i].x//8, spirits.ss[i].y//8+2)
+        if ((background < 1 or background > 20) and spirits.ss[i].dx > 0) or ((background < 1 or background > 20) and spirits.ss[i].dx < 0) then 
+            spirits.ss[i].dx = spirits.ss[i].dx * -1
+        else
+            background = mget(spirits.ss[i].x//8, spirits.ss[i].y//8+1)
+            if ((background >= 1 and background <= 20) and spirits.ss[i].dx < 0) or ((background >= 1 and background <= 20) and spirits.ss[i].dx > 0) then
+                spirits.ss[i].dx = spirits.ss[i].dx * -1
+            end
+        end
+    
+    end
+
+
+end
+
+function moveFire()
+
+
+end
+
+function playerCollisions()
+
+
+
+end
+
+function spiritCollisions()
+    if spirits.max > 0 then
+        for i = spirits.min, spirits.max do 
+            if spirits.ss[i].alive == 1 then
+                if fire.max > 0 then
+                    for j=fire.min, fire.max do
+                        if fire.fs[j].draw == 1 then
+                            fire.fs[j].x = fire.fs[j].x + 1
+                            fire.fs[j].x = fire.fs[j].x - 1
+                            spirits.ss[i].x = spirits.ss[i].x + 1
+                            spirits.ss[i].x = spirits.ss[i].x - 1
+                            if math.abs(fire.fs[j].x - spirits.ss[i].x) < 6 then
+                                if math.abs(fire.fs[j].y - spirits.ss[i].y) < 6 then
+                                    if fire.fs[j].draw == 1 then
+                                        if spirits.ss[i].alive == 1 then
+                                            fire.fs[j].draw = 0;
+                                            spirits.ss[i].alive = 0;
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if water.max > 0 then
+                    for j=water.min, water.max do
+                        if water.ws[j].draw == 1 then
+                            water.ws[j].x = water.ws[j].x + 1
+                            water.ws[j].x = water.ws[j].x - 1
+                            spirits.ss[i].x = spirits.ss[i].x + 1
+                            spirits.ss[i].x = spirits.ss[i].x - 1
+                            if math.abs(water.ws[j].x - spirits.ss[i].x) < 6 then
+                                if math.abs(water.ws[j].y - spirits.ss[i].y) < 6 then
+                                    if water.ws[j].draw == 1 then
+                                        if spirits.ss[i].alive == 1 then
+                                            water.ws[j].draw = 0;
+                                            spirits.ss[i].dx = 0
+                                            --[[
+                                            if spirits.ss[i].dx == 1.5 then
+                                                spirits.ss[i].dx = 0
+                                            elseif spirits.ss[i].dx  == -1.5 then
+                                                spirits.ss[i].dx = 0
+                                            end
+                                            --]]
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if math.abs(p.px - spirits.ss[i].x) < 2 and math.abs(p.py - spirits.ss[i].y) < 2 and earth.shield == false then
+                    if mget(((p.px+4) // 8), ((p.py+1) // 8)) ~= 81 then
+                        p.lives = p.lives - 1
+                        p.px = p.respawn.x
+                        p.py = p.respawn.y
+                    end
+                end
+            end
+        end
+        while spirits.ss[spirits.min].alive == 0 and spirits.min < spirits.max do
+            spirits.min = spirits.min + 1
+        end
+    end
+    if fire.min < fire.max then
+        while fire.fs[fire.min].draw == 0 and fire.min < fire.max do
+        fire.min = fire.min + 1
+        end
+    end
+    if water.min < water.max then
+        while water.ws[water.min].draw == 0 and water.min < water.max do
+        water.min = water.min + 1
+        end
+    end
+end
+
+function refreshState()
+    for i=1, spirits.max do
+        spirits.ss[i] = nil
+    end
+
+    spirits.min = 1
+    spirits.max = 0
+    for i=1, state.lanternNum, 1 do
+        if mget(state.lanterns[i].x//8, state.lanterns[i].y//8) == 65 then
+            for j=1,8 do
+                spirits.max = spirits.max + 1
+                --print(state, 0, 0)
+                --print(state.lanterns, 0, 10) 
+                --print(state.lanterns[i], 0, 20)
+                --print(state.lanterns[i].x, 0, 30) 
+                --state.lanterns[i].x = state.lanterns[i].x + 1
+                --state.lanterns[i].x = state.lanterns[i].x - 1
+                --state.lanterns[i].y = state.lanterns[i].y +  1
+                --state.lanterns[i].y = state.lanterns[i].y -  1
+
+                spirits.ss[spirits.max] = {x=math.random(state.lanterns[i].x-80,state.lanterns[i].x+80), y=math.random(state.lanterns[i].y-80,state.lanterns[i].y), dx=1, dy=0, ddx=0, ddy=0, facing = 0, id = 0, meter = 0, alive = 1, watered = false} 
+                -- check to see if it spawned at a valid x value (e.g if it spawned at an x value in the middle of a rock, you have to change the y coordinate)
+                -- similarly, if it spawned at an x coordinate in the middle of black space, the y coordinate needs to be higher (go down the screen)
+                -- Note: the "break" is to ensure the loop doesn't run forever
+                spirits.ss[spirits.max].y = spirits.ss[spirits.max].y  - (spirits.ss[spirits.max].y % 8)
+                spawnblock = mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+2)
+                if spawnblock >=1 and spawnblock <=20 then
+                    while spawnblock >=1 and spawnblock <=20  do 
+                        spawnblock = mget(spirits.ss[spirits.max].x//8, spirits.ss[spirits.max].y//8+2)
+                        if spirits.ss[spirits.max].y < state.ys then 
+                            spirits.ss[spirits.max].draw = 0
+                            break 
+                        end
+                        spirits.ss[spirits.max].y = spirits.ss[spirits.max].y-8
+                    end 
+                else
+                    spawnblock = mget(spirits.ss[spirits.max].x//8, (spirits.ss[spirits.max].y)//8+3)
+                    while spawnblock ==0 or spawnblock >20 do
+                        spawnblock = mget(spirits.ss[spirits.max].x//8, (spirits.ss[spirits.max].y+1)//8+3)
+                        if spirits.ss[spirits.max].y > 135*8 then
+                            spirits.ss[spirits.max].draw = 0
+                            break 
+                        end
+                        spirits.ss[spirits.max].y = spirits.ss[spirits.max].y+8
+                    end 
+                end
+            end
+        end
+    end
+end
+
+function playGame()
+    -- print(p.px,80,96)
+    if (start) then
+        start=false
+        refreshState()
+    end
+
+    if (p.px > state.xe) then 
+        if state.xr ~= "error" then
+            state = state.xr
+            refreshState()
+        end
+    elseif (p.px < state.xs) then 
+        if state.xl ~= "error" then 
+            state = state.xl
+            refreshState()
+        end
+    elseif (p.py < state.ys) then 
+        if state.yt ~= "error" then
+            state = state.yt
+            refreshState()
+        end
+    elseif (p.py > state.ye) then 
+        if state.yb ~= "error" then
+            refreshState()
+            state = state.yb
+        end
+        refreshState()
+    end
+
+    if (p.px < 128) then 
+        theMap.mapXS = 0 
+        sx = 0
+    else 
+        theMap.mapXS = p.px // 8 - 18 
+        sx = -(p.px%8)
+    end
+        
+    if (p.py < 64) then 
+        theMap.mapYS = 0 
+        sy = 0
+        
+    else 
+        theMap.mapYS = p.py // 8 - 8 
+        sy = -(p.py%8)
+    end
+    if p.px > -16 and p.px < 1928  and p.py > -8 and p.py < (135 * 8 + 8) then
+        map(theMap.mapXS, theMap.mapYS, 36, 17, sx,sy)
+    else
+        p.lives = p.lives - 1
+        p.px = p.respawn.x
+        p.py = p.respawn.y
+    end
+    
+
+    p.ddy = 0.5
+    --elements()
+    movement()
+    moveEnemies()
+    moveFire()
+    playerCollisions()
+    spiritCollisions()
+
+
+    -- check element function
+    callFire()
+    callEarth()
+    
+    callWater()
+    if (fire.meter < 300) then fire.meter = fire.meter + 1 end
+    if (water.meter < 300) then water.meter = water.meter + 1 end
+    if (earth.meter < 200) then earth.meter = earth.meter + 1 end
+    if (air.meter < 300) then air.meter = air.meter + 1 end
+
+    ground = mget(((p.px+4) // 8), (p.py // 8) + 2)
+    
+    left = mget(p.px//8, p.py//8+1)
+    right = mget((p.px+8)//8, p.py//8+1)
+    
+
+    p.dy = p.dy + p.ddy
+    p.dx = p.dx + p.ddx
+
+    if ground >= 1 and ground <= 20 then
+        if (p.dy > 0) then
+            p.dy = 0
+            p.py = p.py - (p.py % 8)
+        end
+    end
+    head = mget(((p.px+4) // 8), (p.py // 8))
+    if head >= 1 and head <= 20 then
+        if (p.dy < 0) then
+            p.dy = 0
+            p.py = p.py - (p.py % 8) + 8
+        end
+    end
+    if (left >= 1 and left <= 20 and p.dx < 0) or (p.px < 2 and p.dx < 0) then
+        p.dx = 0
+    end
+    if (right >= 1 and right <= 20 and p.dx > 0) or (p.px > (1920-1) and p.dx > 0) then
+        p.dx =0
+    end
+
+    callAir()
+
+    p.px = p.px + p.dx
+    p.py = p.py + p.dy
+
+    spr(257, p.px - (theMap.mapXS*8 - sx), p.py - (theMap.mapYS*8-sy), 0,1,p.facing,0,1,2)
+    if earth.shield then spr(258, p.px - (theMap.mapXS*8 - sx), p.py - (theMap.mapYS*8-sy), 0,1,p.facing,0,1,2) end
+    if air.on then spr(259, p.px - (theMap.mapXS*8 - sx), p.py - (theMap.mapYS*8-sy), 0,1,p.facing,0,1,2) end
+    print("lives: ", 190, 0, 8)
+    print("Lanterns Lit: ", 0, 0, 8)
+    print(p.lives, 222, 0, 8 )
+    print(lanternCount, 80, 0, 8)
+    print("/31", 92, 0, 8)
+    spr(305, 0, 100, 0)
+    index = 10
+    for i=0, earth.meter, 20 do
+        spr(306, index, 100, 0)
+        index = index + 1
+    end
+    spr(321, 0, 109, 0)
+    index = 10
+    for i=0, fire.meter, 20 do
+        spr(322, index, 109, 0)
+        index = index + 1
+    end
+    spr(337, 0, 118, 0)
+    index = 10
+    for i=0, water.meter, 20 do
+        spr(338, index, 118, 0)
+        index = index + 1
+    end
+    spr(353, 0, 127, 0)
+    index = 10
+    for i=0, air.meter, 20 do
+        spr(354, index, 127, 0)
+        index = index + 1
+    end
+
+    if p.lives == 0 then
+        p.px = 32
+        p.py = 32
+        p.respawn.x = 32
+        p.respawn.y = 32
+        p.lives = 5
+        start = true
+        state = surface
+    end
+
+
+end
+
+function TIC()
+    itrs = itrs+1
+
+        
+    playGame()
+
+end
+
+
+
+-- <TILES>
+-- 001:3333333333333333333333333333333333333333333333333333333333333333
+-- 002:555555555559555595999555999e9959999999e99999e9999e9999999999e999
+-- 003:999e99999e9999e999e999999e99e9999999999e99e99999e99999e99999e999
+-- 004:0333344003344ee0044ee3300ee333300333344003344ee0044ee3300ee33330
+-- 005:bbbbbb3b33333bbb3bbb3333bb3bbbbb33333333b333333b3bbbbbb3b334433b
+-- 006:333333333bbbbbb33b3333333b3b3b333b333b333b3bbb333b33333333333333
+-- 007:333333333bbbbbb3333333b333b3b3b333b333b333bbb3b3333333b333333333
+-- 008:333333333bbbbbb3bbb44bbbb444444b44bbbb444b3333b4b330033b33000033
+-- 009:3333333333bbbb334b3333b444333344344444433bbbbbb3b333333b33000033
+-- 017:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+-- 018:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+-- 033:03b33b3004b33b403b4334b33b3443b303b33b3003b33b304b4334b43b3443b3
+-- 034:0333344003344ee0044ee3300ee333300333344003344ee0044ee3300ee33330
+-- 035:0a9999a00aaa99a00999aaa0099999a00a9999900aaa99900a99aaa00aa999a0
+-- 036:00000000000000aa00000a9900009a990009a99900a9a9990a99aa9a0a9999a0
+-- 037:0a9999a0a9aa99a0999a9a00999a900099a9000099a00000aa00000000000000
+-- 038:0a9999a00a99aa9a00a9a9990009a99900009a9900000a99000000aa00000000
+-- 039:00000000aa00000099a0000099a90000999a9000999a9a00a9aa99a00a9999a0
+-- 040:0a9999a0aaaa99a09999aaa0999999a0aa9999909aaa99909a99aaa00aa999a0
+-- 041:0a9999a00a99aaaa0aaa99990a999999099999aa0999aaa90aaa99a90a999aa0
+-- 042:000a00a000aa0aaa000a0a000a0aaa0a0aa0aa0a000aaaaaa0a0a0aa0a0aaaa0
+-- 043:00a000000aa00aa00a00aa000a0aa0000a0a0000aaa00aaaaaaaa0000aa00000
+-- 044:00000a000aa00aa000aa00a0000aa0a00000a0a0aaa00aaa000aaaaa00000aa0
+-- 045:0a00a000aaa0aa0000a0a000a0aaa0a0a0aa0aa0aaaaa000aa0a0a0a0aaaa0a0
+-- 049:3beeeebb33beeb3b34beeb33344bb33333344433333334440000333300000000
+-- 050:eeeeeeeebeeeeeebbbeeeebb3bbeebb333beeb3343beeb3444beeb44333ee333
+-- 051:bbeeeeb3b3beeb3333beeb43333bb44333444333444333333333000000000000
+-- 052:e888888ee888888ee888888ee888888ee888888ee888888ee888888eeeeeeeee
+-- 053:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+-- 058:0a000a00a0aa0aa09aaaaaaa99a0aa909aaa9aaa9aaaaa00aa0a0aaa00a0aaa0
+-- 059:000a0aaaaaa00000aaaaaaaa0aaaa000aaaa0aaaa90aaaa0aaaaaa0a0aaa00a0
+-- 060:aaa0a00000000aaaaaaaaaaa000aaaa0aaa0aaaa0aaaa09aa0aaaaaa0a00aaa0
+-- 061:00a000a00aa0aa0aaaaaaaa909aa0a99aaa9aaa900aaaaa9aaa0a0aa0aaa0a00
+-- 065:000000000033330003bbbb3000211200003113000031130000bbbb000bbbbbb0
+-- 066:033ee330033ee33003eeee30033ee330033ee33003eeee30033ee330033ee330
+-- 074:0a0aaaa0a0a0a0aa000aaaaa0aa0aa0a0a0aaa0a000a0a0000aa0aaa000a00a0
+-- 075:0aa00000aaaaa000aaa00aaa0a0a00000a0aa0000a00aa000aa00aa000a00000
+-- 076:00000aa0000aaaaaaaa00aaa0000a0a0000aa0a000aa00a00aa00aa000000a00
+-- 077:0aaaa0a0aa0a0a0aaaaaa000a0aa0aa0a0aaa0a000a0a000aaa0aa000a00a000
+-- 081:600000000033330003bbbb3006266206003663000036636060bbbb000bbbbbb6
+-- 082:033ee33003eeee33033eeee30333eeee003e3eee003333e30000333300000000
+-- 083:00000000333300003e333300eee3e300eeee33303eeee33033eeee30033ee330
+-- 098:0000000000003333003333e3003e3eee0333eeee033eeee303eeee33033ee330
+-- 099:033ee33033eeee303eeee330eeee3330eee3e3003e3333003333000000000000
+-- </TILES>
+
+-- <SPRITES>
+-- 001:0000000000000000000ff00000bbb00000bb8b00000bb0000001100000111000
+-- 002:0e0eee00e00000ee000000000000000ee000000ee00000eee00000e000000000
+-- 003:000000000000000000000000e000000008008000008800880080080000080000
+-- 004:0000000000000008000008880000008400000084000000080000000800000008
+-- 005:8000000088000000488800000480000804800884480000880800008888000004
+-- 006:0800000008000000888000008788000074748800747880008788800084840000
+-- 007:0000008000000888000008870008887400008874000088870000048400000884
+-- 008:0000800000008000000888000088788088474748088747880888788800484840
+-- 009:0000000000000000000000000000000080000000000000000000000000000000
+-- 017:001120000011220b001112200002200000022200000202000020002000200020
+-- 018:0000000ee00000e00e00000e0e0000000e0000000e00000eee000e0e0000ee00
+-- 019:0000088808800000000880000800008800888880008000000008888000808000
+-- 020:0088800000008888000008880000000000000000000000000000000000000000
+-- 021:8000000880000004000000000000000000000000000088000000084800000088
+-- 022:8488000088840000888000004840000088800000484000008800000080000000
+-- 023:0000048800000088000004800000088080004800884088000888800000880000
+-- 024:0088488000488840000888000004840000088800800484008488800008880000
+-- 033:0000000000220000222222222211122111221112222022210000002200000000
+-- 034:0000000000777700077ff77077ffff707ff7fff77fffff7707fff77000777700
+-- 049:00000000000ee00000eeee000eeeeee00eeeeeeeddddeeed0dddded0000ddd00
+-- 050:9999999999999999999999999999999999999999999999999999999999999999
+-- 065:0002000000022002020220020222202201222220011222100011110000001000
+-- 066:1111111111111111111111111111111111111111111111111111111111111111
+-- 081:0000700000007000000777000077f700007ff770007ff7700077770000077000
+-- 082:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+-- 097:0000000000088880000800880008800888000008088800880000880000000000
+-- 098:8888888888888888888888888888888888888888888888888888888888888888
+-- </SPRITES>
+
+-- <MAP>
+-- 002:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000
+-- 003:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000102210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a2b2000000000000000000000000000000000000000000000000000000000000002200100000000000000000000000000010000000220000000000000000000000000000000000000000000000000000
+-- 004:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010221000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c2d2927200000000000000c2d2000000000000000000000000000000000000000000002200001000000000000000000000001000000000220000000000000000000000000000000000000000000000000000
+-- 005:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010221000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c3d3826272a2b200000000c3d382a2b2000000000000000000000000000000000000002200000010101010101010101010100000000000220000000000000000000000000000000000000000000000000000
+-- 006:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000c4d4627292a3b300000000c4d492a3b3000000000000000000000000000000000000002200000000002200000000002200000000000000220000000000000000000000000000000000000000000000000000
+-- 007:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006282a4b400000000000032a4b4000000000000000000000000000000000000002200000000002200000000002200000000000070505050000000000000000000000000000000000000000000000000
+-- 008:000000000000000000000000000000000000000000000000000000000000000000000000000000000000002200000000220000002200000000000020200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000220000002200000000000000000000000000000000000000000000001010100000000000000000000000000000000000000042524100000000000042520000000000000000000000000000000000000000002200000014002200000000002200140000007000000000000000000000000000000000000000000000000000000000
+-- 009:000000000000000000000000000000002020202000000000000000000000000000000000000000000022002200000000220000002200002020202030301111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000220000002200000000000000000000000010101010000000000000102200101010000000001111110000000000000000004282000000000000000032000000000000000000000000000000000000000000002200000012002200000000002200120000700000000000000000000000000000000000000000000000000000000000
+-- 010:000000000000000000000000000000003030303020200000000000000000000000000000111100000022002200002020202020202020201130303030303030110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000220014002200000000000000000000101010002200100000000000002200000010101011111111111100000000000000425232000000140000000032000000000000000000000000000000000000000000001111111111111111000000801080808070000000000000000000000000000000000000000000000000000000000000
+-- 011:000000000000000000000000000000001111113030302020000000000000000000000011111111000022002200003030303011111111111111111111111111111111000000000000000000000000000000000000111111111111112000000000000000000000002020202020200000120012001200000000111111111010100000002200100000000000000022000000001111111111111111110000000030520032000000120000000032000000000000000000000000000000000011111111111111111111111100000000002200000000000000000000000000000000000000000000000000000000000000000000
+-- 012:000000000000202020000000000000001111111111303030202020202020202020202011111111112020202011203011111111111111111111111111111111111111000000000000000000000000000000000000111111111111111120202000000000002020203030303030302020202020202020202020111111110000000000220000000000000000000000220000001111111111111111111111113030303030303030303030303030303030303030303011111111111111111111111111111111111111110000000000002200000000000000000000000000000000000000000000000000000000000000000000
+-- 013:000000000000303030000000000000001111111111111130303030303030303030301111111111113030111111111111111111111111111111111111111111212111111100000000000000000000000000000011111111111111111111113020202020203030303030303030303030303030303030111111111111111100000022000000000000000000000000002200111111111111111111111111111111303030303030303030303030303030303030111111111111111111111111111111212111111111000000000000002200000000000000000000000000000000000000000000000000000000000000000000
+-- 014:202020202020303030202020202020201111111111111111111130303030303030111111111111111111111111111111111111111111111111111111112121211111111100000000000000000000000000000011111111111111111121112121213030303030303030303030303030303030303011111111111111111100002200000000000000000000000000000022111111111121211111111111111111111111303030303030303030303030111111111111111111111111111111111121112121111100000000000000002200000000000000000000000000000000000000000000000000000000000000000000
+-- 015:303030303030303030303030303030212111111111111111111111303011111111111111111111211111111111111111111111111111111111111111211121111121212111111111111111111111111111111111111111111121212121211121211111111111111111111111111111111111111111111111111111111111220000000000000000000000000000000000111111112121211111212121212121111111111111111111111111111111111111111111212121211111112111212111211111110000000000000000002200000000000000000000000000000000000000000000000000000000000000000000
+-- 016:303030303030303030303030303030212121211111111111111111111111111111111111212121211111211111111111111111111111111111111111112121212121112111111111111111111111111111111111111111211121212121212121212111111111111111112121211111111111111111111111212111111111000000000000000000000000000000000000111111112121112121212121212111212111111111111111111111111111112111212121211111112121211121111111111111000000000000101010101010101000000000000000000000000000000000000000000000000000000000000000
+-- 017:111111111111111111111111112121212121212111111111111111111111111111212121212121212121112121212111111111111111111111111121212121212121211111111111111111111111111111111111112121212121212121212121212121211111111121212121212111111111111111112121211111111111000000000000000000000000000000000000111111112111212121111111212111211111212111111111111111112111212121212111111111112111111111111111110000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 018:111111111111111111111111112121212121212121212111111111111111111121212121212121212121212121212111111111111111111121212111212121212121212111212121111111212111111111111111212121212121212121212121111111111111112121212121111121112111212121212121111111111111000000000000000000000000000000000000111111112121112111212121211111212121212111111111111121212121112111111111111111111111111111111111000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 019:111111111111111111111111111111112121212121212121212111211121212121212121212121212111212121211121112121111121212121212121212121111121112111111111112111112111111111111121212121212121212111211111111111111121212121111111111111112121211121111121212111111111000000000000000000000000000000000000111121211121212111211111111111111111212121211121212121112111112111111111111111111111110000220000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 020:111111111111111111111111111111111111212121212121212121211121212121211111112121212111212121211121212121112121212121211121212111111111112111111121111111211121212121112121212121212121111111111111111111212121111111111111111111111111212111111121212111111111000000000000000000000000000000000000112121212121112121212121211111212121211111111121112121211111111111111111111111434343000000220000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 021:111111111111111111111111111111111111111121212121212121212121212121111111111121212121212121212121212121212121212121212121211111111111111121211121112121212121212121212121212121211111111111111111112121212121111111212111111111111111111111111111212121111111110000000000000000000000000000000011111111212121112111111111111111111111111121211111112121111111111111111111111143434343000000220000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 022:111111111111111111111111111111111111111111212121212121212121111111111111111111211121212121212121211121212121212111212121111111111111111111212121212111111111212121212121211111111111111111111111211121212121212121111111111111111111111111111111211121111111110000000000000000000000000000000011111111212121211111111111111111111111112121111111112111111111110000004343434343434343000000220000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 023:111111111111111111111111111111111111111111111111111111111111111111111111111111111121212121212121212121212121211111212121111111111111111121212121211121212121212121212111111111111111111111111121212121111121111111111111434343434343432211111111111111111111110000000000000000000000000000000011111111212111111111111111111111111111212111112121211111111100000000004343434343434343000000220000000010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 024:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111211121112111112121212111111111111111112121212111111111212111111121111111111111111111111111111121211111211111111111112243434343434343432200001111111111111111110000000000000000000000000000001111111111111111111111111111111111111121211111212121211111110000000000004343434343434343000000220000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 025:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112121211111111111111111002243434343434343432200000011111111111111111100000000000000000000000000111111111111111111111111111111111111112111112121211121111111000000000000004343434343434343000000220000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 026:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111111112121111111111111110000002243434343434343432200000000111111111111111100000000000000000000000011111111111111111111111111211111111111211121112121211111111100000000000000004343434343434343000000220000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 027:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111212111111111111111111111211111111111111111000000002243434343434343432200000000111111111111111100000000000000000000001111111111111111111111111111212111111121112111111111111111111100000000000000004343434343434343000010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 028:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121111121111111111111111111112121111111111111111100000000002243434343144343432200000000001111111111111111000000000000000000001111111111111111111111111111112121212121112121211111111100000000000000000000004343434343434343000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 029:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111212111111111111111111121212111111111110000220000000000002243434343124343432200000000002211111111111111110000000000000000111111111111111111111111111111111121211111112111111111110000000000000000000014004343434343434343000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 030:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121111121111111111111111111112121211111111111000000220000000000001010101010101010101010000000002200111111111111111100000000111111111111111111111111111111111111112121111121211111111111110000000000000000000012004343434343434343000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 031:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111111111111212121111111111100000000220000000000000022000000000000220000000000002200111111111111111111111111111111111111111111111111111111111111212121211111111111111111000000000000000000001010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 032:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111211111111111111111111121112111111111110000000000220000000000000022000000000000220000000000002200001111111111111111111111111111111111111111111111111111111111111121111111111111111100000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 033:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121212111111111111121211111112121111111211111000000000000220000001400000022000000000000220000001400002200002211111111111111111111111121212111111111111111111111111111111121211111111111110000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 034:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121212111111111112111111121211111112121211100000000000000220000001200000022000000000000220000001200002200002200000000000000111111111121212121211111111111111111111111112121111111111111000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 035:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111211111212121111121111121211100000000000000101010101010101010000000000010101010101010101000002200000000000000001111111111212121111121211111111111111111212121212111111111000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 036:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121112121212111211111112121112200000000000000002200000000000000000000000000000000000000000000002200000000000000000011111111112121111111112121212111111121112121211111111111000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 037:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112121212111112121212121112111211111002200000000000000002200000000000000000000000000000000000000000000002200000000000000000000111111111121212111111121111111111111212111111111111100000000000010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 038:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121212121212121111111111111111111002200000000000000002200000000000000000000000000000000000000000000002200000000000000000000001111112111112111111111111121112111211121111111110000000000000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 039:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112121212111111121211111002200000000000000002200000000000000000000000000000000000000000000002200000000000000000000000011111121212121211111111121112111112111111111110000000000000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 040:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111212111211111111121211100002200000000101010101000000000000000000000000000000000000000000000002200000014000000000000000000111121211111112121111111211121211111111100000000000000000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 041:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111212111111111112121110000002200000000002200000000000000000000000000000000000000000000000000002200000012000000000000000000001111212121111121111111111111111111111100000000000000000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 042:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121211111212111111121211111110000002200000000002200000000000000000000000000000000000000000000000000101010101010101010101000000000000011112121211121211121212121111111111100000000000000000022000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 043:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112121111111211111211111211111110000002200000000002200000000000000000000000000000000000000000000000000000000000000220000000000000000000011111121111121111121212111111111111100000000101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 044:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111212111111121212111112111111111110000002200000000002200000000000000000000000000000000000000000000000000000000000000220000000000000000000000111111112121111121212111111111111100000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 045:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111112111211111112121111111111111111111110000002200001010101010000000000000000000000000000000000000000000000000000000000000101010101010100000000000001111112111111111211111111111110000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 046:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111121211111111111112111211111212111112121111111111324330000002200000022000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300001111111111111111111111111111110000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 047:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111211111111111112111111111111121211121111111111111110024000000002214000022000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300000000111111111111111111111111110000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 048:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112121211111112111111111111111211111111111211111112111211111111111110024000000002212000022000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300000000000011111111111111111111000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 049:111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111211111112121111121111111111111211121212111111111111111000024000000001010101010000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300000000000000001111111111110000000000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 050:111111111111111111111111111111111111111111111111115353535353535353531111111111111111111111111111111121111121211121112121111111112111111111111121212121111111211111111111000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300000000000000004311111143430000000000101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 051:111111111111111111111111111111111111111111115353535353535353535353535353535353111111111111112121112121211111212121212111111111111111111111111121212111112111211111111100000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022434343434300000000000000004343434343430000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 052:111111111111111111111111111111111111111153535353535353535353535353535353535353531111111111212111111111211111211111111111111111111111111111111111212111112121211111111100000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010101010101010000000000000004343434343430000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 053:111111111111111111111111111111111111115353535353535353535353535353535353535353535311111111111111112111111111111111111111111111111111111111111111112111111121211111110000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000000000004343434343430000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 054:111111111111111111111111111111111111535353535353535353535353535353535353535353535353531111111111211111111111111111111111111111000013243300111111211121111121211111110000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000000000004343434343430000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 055:111111111111111111111111111111111153535353535353535353535353535353535353535353535353535353111111111111111111111111000000000000000000240000001111111121112111211111110000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000000000004343434343430000000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 056:111111111111111111111111111111115353535353535353535353535353535353535353535353535353535353111111111111000000000000000000000000000000240000001111112111211111211111000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000140000004343434343430014000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 057:111111111111111111111111111153535353535353535353535353535353535353535353535353535353535353535311000000000000000000000000000000000000240000000011111111211111211111000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000120000004343434343430012000000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 058:111111111111111111111111115353535353535353535353531453535353535353535353535353535353535353530000000000000000000000000000000000000000240000000011112111111111211111000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 059:111111111111111111115311535353535353535353535353531253535353535353535353535353535353535353000000000000000000000000000000000000000000240000000000001121111111211100000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 060:111111111111111111535353535353535353535353531111111111115353535353535353535353535353535300000000000000000000000000000000000000000000240000000000001323334313233300000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 061:111111111111111153535353535353535353145353111111111111111111115353535353535353535353530000000000000000000000000000000000000000000000240000000000000024434343240000000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 062:111111111111115353535353535353535353125311111111111111111111111111535353535353535353000000000000000000000000000000000000000000000000240000000000000024434343240000000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 063:111111111111535353535353535353535311111111111111111111111111111111115353535353535300000000000000000000000000000000000000000000000000240000000000000024434343240000000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 064:111111111111535353535353535353531111111111111111111111111111111111111111535353530000000000000000000000000000000000000000000000000000240000000000000024431443240000000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 065:111111111111535353535353535353111111111111111111111111111111111111111111111153000000000000000000000000000000000000000000000000000000240000000000000024431243240000000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 066:111111111111535353535353535311111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000240000000000101010101010101010000000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 067:111111111111535314535353535311111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000240000000010000000000000000000100000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 068:111111111111535312535353535311111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000240000001000000000000000000000001000000024000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 069:111111111111101010105353535311111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000001010101010100000000000000000000000000010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 070:111111111111535353535353535311111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000022434322000000000000000000000000000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 071:111111111111535353535353535311111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000022434322000000140000000000000014000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 072:111111111111535353535353535311111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000022434322000000120000000000000012000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 073:111111111111115353535353535311111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000022434322000000101010101010101010000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 074:111111111111115353535353535353111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000022434322000000002243434343432200000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 075:111111111111111111535353535353531111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000022434322000000002243434343432200000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 076:111111111111111111535353535314535311111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000022434322000000002243434343432200000000224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 077:111111111111111111535353535312535353111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000022434322001400002243434343432200001400224343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 078:1111111111111111115353535310101010101111111111111111111111111111000000c2d2a2b2000000000000000000000000000000000000000000000000000012434312001200002243434343432200001200124343120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 079:1111111111111111535353535353535353535311111111111111111111111111000000d392a3b3000000000000000000000000000000000000000000000000001010101010101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 080:11111111111111115353535353535353535353111111111111111111111111110000004252a4b4000000000000000000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 081:111111111111111153535353535353535353111111111111111111111111111100004252000000a2b200000000000000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 082:111111111111111153535353535353535353111111111111111111111111111100925200000042a3b300000000000000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 083:1111111111111111535353535353535353111111111111111111111111111100009272c2d2425292720000a2b2000000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 084:1111111111111111535353535353535353111111111111111111111111111100003262729252c4d462720032a2b20000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 085:1111111111111111531453535353535311111111111111111111111111111120202000008200000000627292a3b30000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 086:1111111111111153531253535353535311111111111111111111111111111130303020003200000000006282a4b40000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 087:111111111111111010101053535353111111111111111111111111111111111130303020202020200000003200000000000000000000000000000000000000000000000022434343432200000000002243434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 088:111111111111535353535353535353111111111111111111111111111111113030303030303030302020202020200000000000000000000000000000000000000000000012434343431200000000001243434343120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 089:111111111111535353535353535311111111111111111111111111111111111111113030303030303030303030302020000000000000001010101000000000000000101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 090:111111111111535353535353535311111111111111111111111111111111212111212111113030303030303010101010101010101010103643220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 091:111111111153535353535353535311111111111111111111111111111111112121212121111111111130303011113043434343268080434343220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 092:111111111111535353535353535353111111111111111111111111111111111121212121212111111111111111111143434326364343434343220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 093:111111111111535353535353535353531111111111111111111111111111111111212121212121111111212121212111432636434343434343220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 094:111111111111535353535353535353535311111111111111111111111111111111112121212121112121212121112111113643434343434343220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 095:111111111111115353531453535353535353111111111111111111111111111111111111112121112111112111212111114343434343434343220000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 096:111111111111115353531253535353535353111111111111111111111111111111111121212111212111111111211111114343434343431010101000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 097:111111111111111110101010535353535353535311111111111111111111111111111111211111112121212111212111111010101010103600000000000000000000000000001400002243431443432200001400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 098:111111111111111153535353535353535353535311111111111111111111111111111111211121111121211121212121000000000000000000000000000000000000000000001200002243431243432200001200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 099:111111111111111111535353535353535353535353111111111111111111111111111111211111211121211121111111000000000000000000000000000000000000000010101010101010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 100:111111111111111111115353535353535353535353111111111111111111111111111111112111111111211121111111000000000000000000000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 101:111111111111111111115353535353535353535353111111111111111111111111111111112121212121111121111111000000000000000000000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 102:111111111111111111111153535353535310101010111111111111111111111111111111111111112111111111111100000000000000000014000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 103:111111111111111111111153535353535353535353535353535311111111111111111111111111111111111111111100000000000000000012000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 104:111111111111111111111153535353535353535353535353535353531111111111111111111111111111111111111100000000000000001010101000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 105:111111111111111111111111535353535353535353535353535353535353115353111111111111111111111111111010101010101010103600000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 106:111111111111111111111111535353535353535353535353535353535353535353535353535311111111111111000026364343434322000000000000000000000000000000000000002243434343432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 107:111111111111111111111111111153535353535353535353535353535353535353535353535353535311111111002636434343434322000000000000000000000000000000000000002243431443432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 108:111111111111111111111111111111115353535353535353535353535353535353535353535353535353531113233343434343434322000000000000000000000000000000000000002243431243432200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 109:111111111111111111111111111111111153535353535353535353535353535353535353535353535353530000224343434343434322000000000000000000000000000000001010101010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 110:111111111111111111111111111111111111115353535353535353535353535353535353535353535353530000224343434343434322000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 111:111111111111111111111111111111111111115353535353145353535353535353535353535353535353000000224343434343434322000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 112:111111111111111111111111111111111111111111115353125353535353535353535353535353535353000000224343434343434322000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 113:111111111111111111111111111111111111111111111111111111115353535353535353535353535300000000224343431443434322000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 114:111111111111111111111111111111111111111111111111111111111111535311111153535353530000000000224343431243434310101000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 115:111111111111111111111111111111111111111111111111111111111111111111111111115353000000000010101010101010101036000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 116:111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000022434343220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 117:111111111111111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000022431443220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 118:111111111111111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000022431243220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 119:111111111111111111111111111111111111111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 120:111111111111111111111111111111111111111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000013909090330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 121:111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 122:111111111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 123:111111111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 124:111111111111111111111111111111111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 125:111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 126:111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 127:111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 128:111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 129:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 130:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 131:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 132:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 133:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 134:111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 135:111111111111111111111111111111111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- </MAP>
+
+-- <PALETTE>
+-- 000:385979a12c2cce9544d6c2aa5d9d9d59a155eeba000000aefff6ea814420759d34eece910000004c4c4ca1a1a13c8dff
+-- </PALETTE>
+
