@@ -1,4 +1,4 @@
-# Summary
+# README
 
 Retro video games made for the [Tic-80](https://tic80.com/) platform. Tic-80 is a free and open-source fantasy video game console for making, playing, and sharing games on a limited platform that mimics the 8-bit systems of the 1980s.
 
